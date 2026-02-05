@@ -21,7 +21,7 @@ export function FileTable() {
       Text({ content: file.name, flexGrow: 1 }),
       Text({ content: file.series || "Unknown", width: 20, fg: "#03DAC6" }),
       Text({
-        content: `S${file.season || 1} E${file.episode || "?"}`,
+        content: `S${file.season ?? 1} E${file.episode ?? "?"}`,
         width: 10,
       }),
       Text({

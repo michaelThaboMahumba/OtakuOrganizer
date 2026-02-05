@@ -27,9 +27,13 @@ export function Onboarding() {
       placeholder: "/path/to/anime",
     }).on("enter", () => {
       const renderer = getGlobalRenderer();
-      const input = renderer.root.find("folder-input");
+      const input = renderer.root.getRenderable("folder-input");
       if (input && "value" in input) {
-        const value = String(input.value);
+        const value = String(input.value).trim();
+        if (value === "") {
+          store.addLog("error", "Please enter a valid folder path.");
+          return;
+        }
         store.setState((s) => ({
           config: { ...s.config, scanDirectories: [value] },
           view: "main",

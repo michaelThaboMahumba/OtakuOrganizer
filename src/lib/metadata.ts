@@ -3,23 +3,30 @@ import { store } from "./store";
 export class MetadataParser {
   parse(fileName: string) {
     // Improved regex for various patterns
-    const seasonMatch = fileName.match(/(?:S|Season\s*)(\d+)/i) || fileName.match(/(\d+)x/i);
-    const episodeMatch = fileName.match(/(?:E|Episode|Ep\s*)(\d+)/i) || fileName.match(/x(\d+)/i) || fileName.match(/\s-\s(\d+)(?:\s|\[)/i);
+    const seasonMatch = fileName.match(/(?:S|Season)\s*(\d+)/i) || fileName.match(/(\d+)x/i);
+    const episodeMatch =
+      fileName.match(/(?:E|Episode|Ep)\s*(\d+)/i) ||
+      fileName.match(/x(\d+)/i) ||
+      fileName.match(/\s-\s(\d+)(?:\s|\[)/i);
 
-    const season = seasonMatch ? parseInt(seasonMatch[1]!) : 1;
-    const episode = episodeMatch ? parseInt(episodeMatch[1]!) : undefined;
+    const episode = episodeMatch ? parseInt(episodeMatch[1]!, 10) : undefined;
+    const season = seasonMatch ? parseInt(seasonMatch[1]!, 10) : (episode !== undefined ? 1 : undefined);
 
     // Attempt to extract title by removing everything after season/episode/tags
     let title = fileName;
     const splitMatch = seasonMatch || episodeMatch;
     if (splitMatch) {
-      title = title.substring(0, title.indexOf(splitMatch[0]));
+      const index = title.indexOf(splitMatch[0]);
+      if (index !== -1) {
+        title = title.substring(0, index);
+      }
     }
 
     title = title
       .replace(/\[.*?\]/g, "")
       .replace(/\(.*?\)/g, "")
       .replace(/_|-/g, " ")
+      .replace(/\.[^/.]+$/, "") // Remove extension
       .trim();
 
     return { title, season, episode };

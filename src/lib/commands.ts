@@ -78,26 +78,33 @@ export class CommandHandler {
     }
 
     store.addLog("info", "Starting AI organization...");
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]!;
-      store.updateProgress(i + 1, files.length, `AI Analyzing: ${file.name}`);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]!;
+        store.updateProgress(i + 1, files.length, `AI Analyzing: ${file.name}`);
 
-      const suggestion = await aiService.suggestGrouping(file.name);
-      if (suggestion) {
-        file.series = suggestion.series;
-        file.season = suggestion.season;
-        file.episode = suggestion.episode;
-        file.status = "completed";
+        try {
+          const suggestion = await aiService.suggestGrouping(file.name);
+          if (suggestion) {
+            file.series = suggestion.series;
+            file.season = suggestion.season;
+            file.episode = suggestion.episode;
+            file.status = "completed";
+          }
+        } catch (error) {
+          store.addLog("error", `AI Error for ${file.name}: ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
-    }
 
-    store.setState({ files: [...files] });
-    store.clearProgress();
-    store.addLog("success", "AI Organization complete.");
+      store.setState({ files: [...files] });
+      store.addLog("success", "AI Organization complete.");
+    } finally {
+      store.clearProgress();
+    }
   }
 
-  undo() {
-    organizer.undo();
+  async undo() {
+    await organizer.undo();
   }
 }
 

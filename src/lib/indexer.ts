@@ -48,13 +48,13 @@ export class Indexer {
           file.id,
           file.path,
           file.name,
-          file.series || null,
-          file.season || null,
-          file.episode || null,
+          file.series ?? null,
+          file.season ?? null,
+          file.episode ?? null,
           file.status,
           file.size,
           file.format,
-          file.description || null
+          file.description ?? null
         );
       }
     });
@@ -65,7 +65,8 @@ export class Indexer {
     const resource = {
       embeddings: files.map((f) => ({
         id: f.id,
-        metadata: { title: f.name, series: f.series },
+        title: f.name,
+        url: f.path,
         // Simulate embeddings (Voy expects 768 or 1536 depending on model, we'll use a simple approach)
         embeddings: this.generateMockEmbedding(f.name + " " + (f.series || "")),
       })),
@@ -84,9 +85,9 @@ export class Indexer {
 
   search(query: string, semantic: boolean = false): AnimeFile[] {
     if (semantic) {
-      const queryEmbedding = this.generateMockEmbedding(query);
+      const queryEmbedding = new Float32Array(this.generateMockEmbedding(query));
       const results = this.voy.search(queryEmbedding, 10);
-      const ids = results.neighbors.map((n: any) => n.id);
+      const ids = results.neighbors.map((n) => n.id);
       if (ids.length === 0) return [];
 
       const placeholders = ids.map(() => "?").join(",");

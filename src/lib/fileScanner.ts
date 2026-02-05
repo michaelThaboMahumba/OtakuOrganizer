@@ -9,31 +9,34 @@ export class FileScanner {
 
     store.addLog("info", `Scanning directory: ${directory}`);
 
-    const walk = (dir: string) => {
-      const list = fs.readdirSync(dir);
-      list.forEach((file) => {
-        const filePath = path.join(dir, file);
-        const stat = fs.statSync(filePath);
-        if (stat && stat.isDirectory()) {
-          walk(filePath);
+    const walk = async (dir: string) => {
+      const list = await fs.promises.readdir(dir, { withFileTypes: true });
+      for (const entry of list) {
+        const filePath = path.join(dir, entry.name);
+
+        if (entry.isSymbolicLink()) continue; // Skip symlinks to avoid cycles
+
+        if (entry.isDirectory()) {
+          await walk(filePath);
         } else {
-          const ext = path.extname(file).toLowerCase();
+          const ext = path.extname(entry.name).toLowerCase();
           if (allowedFormats.includes(ext)) {
+            const stat = await fs.promises.stat(filePath);
             files.push({
-              id: Math.random().toString(36).substring(7),
+              id: crypto.randomUUID(),
               path: filePath,
-              name: file,
+              name: entry.name,
               status: "pending",
               size: stat.size,
               format: ext,
             });
           }
         }
-      });
+      }
     };
 
     try {
-      walk(directory);
+      await walk(directory);
       store.addLog("success", `Found ${files.length} video files.`);
     } catch (error) {
       store.addLog("error", `Scan error: ${error instanceof Error ? error.message : String(error)}`);

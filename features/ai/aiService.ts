@@ -72,7 +72,19 @@ export class AIService {
 
       const content = response.choices[0]?.message?.content;
       if (content) {
-        return JSON.parse(content);
+        const parsed = JSON.parse(content);
+        if (
+          typeof parsed?.series !== "string" ||
+          parsed.series.trim() === "" ||
+          !Number.isInteger(parsed?.season) ||
+          !Number.isInteger(parsed?.episode) ||
+          parsed.season < 0 ||
+          parsed.episode < 0
+        ) {
+          store.addLog("error", "AI response failed validation.");
+          return null;
+        }
+        return parsed;
       }
     } catch (error) {
       store.addLog("error", `AI Error: ${error instanceof Error ? error.message : String(error)}`);

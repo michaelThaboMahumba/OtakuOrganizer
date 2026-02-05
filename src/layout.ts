@@ -53,7 +53,7 @@ export function Layout() {
     },
     Text({ content: `Files: ${state.files.length}`, fg: "#BB86FC" }),
     Text({ content: `AI: ${state.config.ai.enabled ? "ENABLED" : "DISABLED"}`, attributes: state.config.ai.enabled ? TextAttributes.NONE : TextAttributes.DIM }),
-    Text({ content: "F1: Scan | F2: Group | F3: Sync | F4: AI | F10: Undo", attributes: TextAttributes.DIM })
+    Text({ content: "F1: Scan | F2: Group | F3: Sync | F4: AI | F5: Setup | F10: Undo", attributes: TextAttributes.DIM })
   );
 
   const MainContent = state.view === "onboarding"
