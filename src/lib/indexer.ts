@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { Database } from "bun:sqlite";
 import { Voy } from "voy-search";
 import path from "path";
 import fs from "fs";
@@ -7,7 +7,7 @@ import { type AnimeFile } from "./store";
 const DB_PATH = "otaku_archive.db";
 
 export class Indexer {
-  private db: Database.Database;
+  private db: Database;
   private voy: Voy;
 
   constructor() {
@@ -17,7 +17,7 @@ export class Indexer {
   }
 
   private initDb() {
-    this.db.exec(`
+    this.db.run(`
       CREATE TABLE IF NOT EXISTS files (
         id TEXT PRIMARY KEY,
         path TEXT NOT NULL,
@@ -39,23 +39,23 @@ export class Indexer {
   async indexFiles(files: AnimeFile[]) {
     const insert = this.db.prepare(`
       INSERT OR REPLACE INTO files (id, path, name, series, season, episode, status, size, format, description)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($id, $path, $name, $series, $season, $episode, $status, $size, $format, $description)
     `);
 
     const transaction = this.db.transaction((files: AnimeFile[]) => {
       for (const file of files) {
-        insert.run(
-          file.id,
-          file.path,
-          file.name,
-          file.series ?? null,
-          file.season ?? null,
-          file.episode ?? null,
-          file.status,
-          file.size,
-          file.format,
-          file.description ?? null
-        );
+        insert.run({
+          $id: file.id,
+          $path: file.path,
+          $name: file.name,
+          $series: file.series ?? null,
+          $season: file.season ?? null,
+          $episode: file.episode ?? null,
+          $status: file.status,
+          $size: file.size,
+          $format: file.format,
+          $description: file.description ?? null
+        });
       }
     });
 
@@ -91,10 +91,10 @@ export class Indexer {
       if (ids.length === 0) return [];
 
       const placeholders = ids.map(() => "?").join(",");
-      return this.db.prepare(`SELECT * FROM files WHERE id IN (${placeholders})`).all(...ids) as AnimeFile[];
+      return this.db.prepare(`SELECT * FROM files WHERE id IN (${placeholders})`).all(...ids) as unknown as AnimeFile[];
     }
 
-    const results = this.db.prepare(`
+    const results = this.db.query(`
       SELECT * FROM files
       WHERE name LIKE ? OR series LIKE ? OR description LIKE ?
     `).all(`%${query}%`, `%${query}%`, `%${query}%`);
@@ -103,7 +103,7 @@ export class Indexer {
   }
 
   getStats() {
-    const count = this.db.prepare("SELECT COUNT(*) as total FROM files").get() as { total: number };
+    const count = this.db.query("SELECT COUNT(*) as total FROM files").get() as { total: number };
     return {
       totalFiles: count.total,
     };

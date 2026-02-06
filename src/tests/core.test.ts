@@ -3,21 +3,28 @@ import fs from "fs";
 import path from "path";
 
 // Mock problematic native modules for the test environment
-mock.module("better-sqlite3", () => {
+mock.module("bun:sqlite", () => {
   return {
-    default: class Database {
-    exec() {}
-    prepare() {
-      return {
-        run: () => {},
-        all: () => [{ id: "test-id-1", series: "Naruto", name: "naruto.mkv" }],
-        get: () => ({ total: 1 })
-      };
+    Database: class Database {
+      run() {}
+      prepare() {
+        return {
+          run: () => {},
+          all: () => [{ id: "test-id-1", series: "Naruto", name: "naruto.mkv" }],
+          get: () => ({ total: 1 })
+        };
+      }
+      query() {
+        return {
+          all: () => [{ id: "test-id-1", series: "Naruto", name: "naruto.mkv" }],
+          get: () => ({ total: 1 })
+        };
+      }
+      transaction(cb: any) {
+        const wrapped = (...args: any[]) => cb(...args);
+        return wrapped;
+      }
     }
-    transaction(cb: any) {
-      return cb;
-    }
-  }
   };
 });
 
@@ -32,16 +39,28 @@ mock.module("voy-search", () => {
   };
 });
 
-describe("Core Logic Suite", async () => {
-  const { MetadataParser } = await import("../lib/metadata");
-  const { Indexer } = await import("../lib/indexer");
-  const { Organizer } = await import("../lib/organizer");
-  const { FileScanner } = await import("../lib/fileScanner");
+describe("Core Logic Suite", () => {
+  let MetadataParser: any;
+  let Indexer: any;
+  let Organizer: any;
+  let FileScanner: any;
 
-  const metadata = new MetadataParser();
-  const indexer = new Indexer();
-  const organizer = new Organizer();
-  const scanner = new FileScanner();
+  let metadata: any;
+  let indexer: any;
+  let organizer: any;
+  let scanner: any;
+
+  beforeAll(async () => {
+    ({ MetadataParser } = await import("../lib/metadata"));
+    ({ Indexer } = await import("../lib/indexer"));
+    ({ Organizer } = await import("../lib/organizer"));
+    ({ FileScanner } = await import("../lib/fileScanner"));
+
+    metadata = new MetadataParser();
+    indexer = new Indexer();
+    organizer = new Organizer();
+    scanner = new FileScanner();
+  });
 
   describe("MetadataParser", () => {
     test("should parse Season and Episode with space", () => {
