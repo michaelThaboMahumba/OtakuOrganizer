@@ -52,7 +52,10 @@ export function Layout() {
       border: ["top"],
     },
     Text({ content: `Files: ${state.files.length}`, fg: "#BB86FC" }),
-    Text({ content: `AI: ${state.config.ai.enabled ? "ENABLED" : "DISABLED"}`, attributes: state.config.ai.enabled ? TextAttributes.NONE : TextAttributes.DIM }),
+    Text({
+      content: `Mode: ${state.config.ai.enabled ? "AI-POWERED" : "SEMANTIC-ONLY"}`,
+      fg: state.config.ai.enabled ? "#03DAC6" : "#FFB74D",
+    }),
     Text({ content: "F1: Scan | F2: Group | F3: Sync | F4: AI | F5: Setup | F10: Undo", attributes: TextAttributes.DIM })
   );
 
