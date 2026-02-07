@@ -2,6 +2,13 @@ import { Box, Text, Input, TextAttributes } from "@opentui/core";
 import { store } from "../store";
 import { getGlobalRenderer } from "../globals";
 
+/**
+ * Renders the onboarding screen for configuring the anime archive folder and wires the Enter key behavior.
+ *
+ * When the user presses Enter in the folder input, the handler reads and trims the input value; if the trimmed value is empty it logs an error and aborts, otherwise it updates the store to set `config.scanDirectories` to an array containing the entered path, sets the view to `"main"`, and logs a success message.
+ *
+ * @returns The UI renderable (a Box) that contains the onboarding form and input handlers.
+ */
 export function Onboarding() {
   return Box(
     {

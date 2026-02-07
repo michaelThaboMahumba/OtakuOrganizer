@@ -15,6 +15,13 @@ const LOGO = [
   "╚██████╔╝   ██║   ██║  ██║██║  ██╗╚██████╔╝",
 ];
 
+/**
+ * Builds the application's top-level UI container (header, main content, and footer) using the current application state.
+ *
+ * The header renders the ASCII logo and title; the main content is chosen from onboarding, summary, AI setup, or the default two-pane file view depending on `state.view`; the footer shows file count, mode indication, and key hints. Visuals such as colors and background are derived from the current state (theme, AI enabled, pulse).
+ *
+ * @returns A top-level `Box` element containing the assembled layout components configured from the current application state.
+ */
 export function Layout() {
   const state = store.getState();
 
