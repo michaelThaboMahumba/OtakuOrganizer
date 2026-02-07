@@ -14,16 +14,21 @@ setGlobalRenderer(renderer);
 let currentRoot: Renderable | null = null;
 let lastUiSnapshot: string | null = null;
 
+/**
+ * Update the CLI UI by mounting a new layout when relevant UI state changes, otherwise request a re-render.
+ *
+ * Reads the current application state, builds a snapshot containing `view`, `filesCount`, `logsCount`, `progress`, `pulse`, `aiEnabled`, and `theme`, and compares it to the last rendered snapshot. If the snapshot differs, unmounts the previous root (if any), instantiates and mounts a new Layout root, and updates the stored snapshot; if the snapshot is identical, requests a renderer re-render without replacing the root.
+ */
 function render() {
   const state = store.getState();
 
-  // Create a snapshot of UI-relevant state.
-  // We exclude transient/high-frequency fields like pulse and progress
-  // to avoid expensive full UI re-instantiations.
+  // Create a snapshot of UI-relevant state
   const currentSnapshot = JSON.stringify({
     view: state.view,
     filesCount: state.files.length,
     logsCount: state.logs.length,
+    progress: state.progress,
+    pulse: state.pulse,
     aiEnabled: state.config.ai.enabled,
     theme: state.config.theme,
   });
