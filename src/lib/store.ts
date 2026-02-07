@@ -112,7 +112,9 @@ class JulesStore {
   }
 
   private notify() {
-    this.listeners.forEach((l) => l(this.state));
+    this.listeners.forEach((l) => {
+      l(this.state);
+    });
   }
 
   // --- Helpers ---
@@ -171,6 +173,7 @@ export const initialState: AppState = {
   files: [],
   logs: [],
   queue: [],
+  pulse: 0,
   indexStats: {
     totalFiles: 0,
     foldersCreated: 0,

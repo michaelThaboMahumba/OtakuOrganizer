@@ -7,9 +7,9 @@ export function ProgressBar() {
 
   if (!progress) return Box({ height: 0 });
 
-  const percent = Math.floor((progress.current / progress.total) * 100);
+  const percent = progress.total > 0 ? Math.max(0, Math.min(100, Math.floor((progress.current / progress.total) * 100))) : 0;
   const width = 40;
-  const filledWidth = Math.floor((percent / 100) * width);
+  const filledWidth = Math.max(0, Math.min(width, Math.floor((percent / 100) * width)));
   const bar = "█".repeat(filledWidth) + "░".repeat(width - filledWidth);
 
   return Box(

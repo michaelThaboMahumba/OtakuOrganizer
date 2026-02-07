@@ -28,19 +28,35 @@ export class CommandHandler {
 
   async groupAll() {
     const files = store.getState().files;
-    store.addLog("info", `Grouping ${files.length} files...`);
+    const newFiles: AnimeFile[] = [];
+    store.addLog("info", `Grouping ${files.length} files (Semantic Mode)...`);
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]!;
-      store.updateProgress(i + 1, files.length, `Grouping: ${file.name}`);
-      // In a real app, this might involve online lookups
-      if (!file.description) {
-        const extra = await metadataParser.fetchOnlineMetadata(file.series || file.name);
-        file.description = extra.description;
+      store.updateProgress(i + 1, files.length, `Analyzing: ${file.name}`);
+
+      let updatedFile = { ...file };
+
+      // Use Semantic Search to improve metadata if AI is disabled
+      if (!store.getState().config.ai.enabled && (!updatedFile.series || updatedFile.series === "Unknown")) {
+        const matches = indexer.search(updatedFile.name, true);
+        if (matches.length > 0 && matches[0]!.series) {
+          updatedFile.series = matches[0]!.series;
+          store.addLog("info", `Semantic match for ${updatedFile.name}: ${updatedFile.series}`);
+        }
       }
+
+      // Fetch fallback online metadata
+      if (!updatedFile.description) {
+        const extra = await metadataParser.fetchOnlineMetadata(updatedFile.series || updatedFile.name);
+        updatedFile.description = extra.description;
+      }
+
+      updatedFile.status = "completed";
+      newFiles.push(updatedFile);
     }
 
-    store.setState({ files: [...files] });
+    store.setState({ files: newFiles });
     store.clearProgress();
     store.addLog("success", "Grouping complete.");
   }
@@ -78,26 +94,37 @@ export class CommandHandler {
     }
 
     store.addLog("info", "Starting AI organization...");
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]!;
-      store.updateProgress(i + 1, files.length, `AI Analyzing: ${file.name}`);
+    const newFiles: AnimeFile[] = [];
 
-      const suggestion = await aiService.suggestGrouping(file.name);
-      if (suggestion) {
-        file.series = suggestion.series;
-        file.season = suggestion.season;
-        file.episode = suggestion.episode;
-        file.status = "completed";
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]!;
+        store.updateProgress(i + 1, files.length, `AI Analyzing: ${file.name}`);
+
+        let updatedFile = { ...file };
+        try {
+          const suggestion = await aiService.suggestGrouping(file.name);
+          if (suggestion) {
+            updatedFile.series = suggestion.series;
+            updatedFile.season = suggestion.season;
+            updatedFile.episode = suggestion.episode;
+            updatedFile.status = "completed";
+          }
+        } catch (error) {
+          store.addLog("error", `AI Error for ${file.name}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        newFiles.push(updatedFile);
       }
-    }
 
-    store.setState({ files: [...files] });
-    store.clearProgress();
-    store.addLog("success", "AI Organization complete.");
+      store.setState({ files: newFiles });
+      store.addLog("success", "AI Organization complete.");
+    } finally {
+      store.clearProgress();
+    }
   }
 
-  undo() {
-    organizer.undo();
+  async undo() {
+    await organizer.undo();
   }
 }
 

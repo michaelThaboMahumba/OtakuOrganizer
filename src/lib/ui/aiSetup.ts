@@ -22,11 +22,19 @@ export function AISetup() {
       placeholder: "sk-or-...",
     }).on("enter", async () => {
       const renderer = getGlobalRenderer();
-      const input = renderer.root.find("ai-key-input");
+      const input = renderer.root.getRenderable("ai-key-input");
       if (input && "value" in input) {
-        const value = String(input.value);
-        await aiService.setup(value);
-        store.setState({ view: "main" });
+        const value = String(input.value).trim();
+        if (value === "") {
+          store.addLog("error", "Please enter a valid API key.");
+          return;
+        }
+        try {
+          await aiService.setup(value);
+          store.setState({ view: "main" });
+        } catch (error) {
+          store.addLog("error", `AI setup failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
     }),
     Box({ height: 1 }),

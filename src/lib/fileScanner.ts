@@ -9,31 +9,42 @@ export class FileScanner {
 
     store.addLog("info", `Scanning directory: ${directory}`);
 
-    const walk = (dir: string) => {
-      const list = fs.readdirSync(dir);
-      list.forEach((file) => {
-        const filePath = path.join(dir, file);
-        const stat = fs.statSync(filePath);
-        if (stat && stat.isDirectory()) {
-          walk(filePath);
-        } else {
-          const ext = path.extname(file).toLowerCase();
-          if (allowedFormats.includes(ext)) {
-            files.push({
-              id: Math.random().toString(36).substring(7),
-              path: filePath,
-              name: file,
-              status: "pending",
-              size: stat.size,
-              format: ext,
-            });
+    const walk = async (dir: string) => {
+      try {
+        const list = await fs.promises.readdir(dir, { withFileTypes: true });
+        for (const entry of list) {
+          try {
+            const filePath = path.join(dir, entry.name);
+
+            if (entry.isSymbolicLink()) continue; // Skip symlinks to avoid cycles
+
+            if (entry.isDirectory()) {
+              await walk(filePath);
+            } else {
+              const ext = path.extname(entry.name).toLowerCase();
+              if (allowedFormats.includes(ext)) {
+                const stat = await fs.promises.stat(filePath);
+                files.push({
+                  id: crypto.randomUUID(),
+                  path: filePath,
+                  name: entry.name,
+                  status: "pending",
+                  size: stat.size,
+                  format: ext,
+                });
+              }
+            }
+          } catch (itemError) {
+            store.addLog("warning", `Skipping file ${entry.name}: ${itemError instanceof Error ? itemError.message : String(itemError)}`);
           }
         }
-      });
+      } catch (dirError) {
+        store.addLog("error", `Could not read directory ${dir}: ${dirError instanceof Error ? dirError.message : String(dirError)}`);
+      }
     };
 
     try {
-      walk(directory);
+      await walk(directory);
       store.addLog("success", `Found ${files.length} video files.`);
     } catch (error) {
       store.addLog("error", `Scan error: ${error instanceof Error ? error.message : String(error)}`);
