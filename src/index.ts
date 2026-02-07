@@ -17,13 +17,13 @@ let lastUiSnapshot: string | null = null;
 function render() {
   const state = store.getState();
 
-  // Create a snapshot of UI-relevant state
+  // Create a snapshot of UI-relevant state.
+  // We exclude transient/high-frequency fields like pulse and progress
+  // to avoid expensive full UI re-instantiations.
   const currentSnapshot = JSON.stringify({
     view: state.view,
     filesCount: state.files.length,
     logsCount: state.logs.length,
-    progress: state.progress,
-    pulse: state.pulse,
     aiEnabled: state.config.ai.enabled,
     theme: state.config.theme,
   });

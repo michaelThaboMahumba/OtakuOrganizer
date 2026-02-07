@@ -83,6 +83,19 @@ describe("Core Logic Suite", () => {
       expect(res.season).toBeUndefined();
       expect(res.episode).toBeUndefined();
     });
+
+    test("should not misclassify resolution tags", () => {
+      const res = metadata.parse("Anime Movie 1280x720.mkv");
+      expect(res.title).toBe("Anime Movie 1280x720");
+      expect(res.season).toBeUndefined();
+      expect(res.episode).toBeUndefined();
+    });
+
+    test("should correctly parse S/E with resolution tags present", () => {
+      const res = metadata.parse("Naruto 720x480 S02E15.mkv");
+      expect(res.season).toBe(2);
+      expect(res.episode).toBe(15);
+    });
   });
 
   describe("Indexer", () => {
@@ -117,14 +130,14 @@ describe("Core Logic Suite", () => {
     const testRoot = "./test_organize_root";
     const sourceFile = "./test_source.mkv";
 
-    beforeAll(() => {
-      if (!fs.existsSync(testRoot)) fs.mkdirSync(testRoot);
-      fs.writeFileSync(sourceFile, "dummy content");
+    beforeAll(async () => {
+      if (!fs.existsSync(testRoot)) await fs.promises.mkdir(testRoot);
+      await fs.promises.writeFile(sourceFile, "dummy content");
     });
 
-    afterAll(() => {
-      if (fs.existsSync(testRoot)) fs.rmSync(testRoot, { recursive: true, force: true });
-      if (fs.existsSync(sourceFile)) fs.unlinkSync(sourceFile);
+    afterAll(async () => {
+      if (fs.existsSync(testRoot)) await fs.promises.rm(testRoot, { recursive: true, force: true });
+      if (fs.existsSync(sourceFile)) await fs.promises.unlink(sourceFile);
     });
 
     test("should safely move file with sanitization", async () => {
@@ -146,6 +159,13 @@ describe("Core Logic Suite", () => {
       // series "My Anime/Series" -> "My Anime_Series"
       const expectedPath = path.join(testRoot, "My Anime_Series", "Season 1", "Episode 5", "test_source.mkv");
       expect(fs.existsSync(expectedPath)).toBe(true);
+    });
+  });
+
+  describe("FileScanner", () => {
+    test("should handle non-existent directories gracefully", async () => {
+      const results = await scanner.scan("/non/existent/path");
+      expect(results).toEqual([]);
     });
   });
 });

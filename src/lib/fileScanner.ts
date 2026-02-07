@@ -10,28 +10,36 @@ export class FileScanner {
     store.addLog("info", `Scanning directory: ${directory}`);
 
     const walk = async (dir: string) => {
-      const list = await fs.promises.readdir(dir, { withFileTypes: true });
-      for (const entry of list) {
-        const filePath = path.join(dir, entry.name);
+      try {
+        const list = await fs.promises.readdir(dir, { withFileTypes: true });
+        for (const entry of list) {
+          try {
+            const filePath = path.join(dir, entry.name);
 
-        if (entry.isSymbolicLink()) continue; // Skip symlinks to avoid cycles
+            if (entry.isSymbolicLink()) continue; // Skip symlinks to avoid cycles
 
-        if (entry.isDirectory()) {
-          await walk(filePath);
-        } else {
-          const ext = path.extname(entry.name).toLowerCase();
-          if (allowedFormats.includes(ext)) {
-            const stat = await fs.promises.stat(filePath);
-            files.push({
-              id: crypto.randomUUID(),
-              path: filePath,
-              name: entry.name,
-              status: "pending",
-              size: stat.size,
-              format: ext,
-            });
+            if (entry.isDirectory()) {
+              await walk(filePath);
+            } else {
+              const ext = path.extname(entry.name).toLowerCase();
+              if (allowedFormats.includes(ext)) {
+                const stat = await fs.promises.stat(filePath);
+                files.push({
+                  id: crypto.randomUUID(),
+                  path: filePath,
+                  name: entry.name,
+                  status: "pending",
+                  size: stat.size,
+                  format: ext,
+                });
+              }
+            }
+          } catch (itemError) {
+            store.addLog("warning", `Skipping file ${entry.name}: ${itemError instanceof Error ? itemError.message : String(itemError)}`);
           }
         }
+      } catch (dirError) {
+        store.addLog("error", `Could not read directory ${dir}: ${dirError instanceof Error ? dirError.message : String(dirError)}`);
       }
     };
 

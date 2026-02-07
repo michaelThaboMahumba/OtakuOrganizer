@@ -46,14 +46,18 @@ export class Organizer {
     }
 
     try {
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
+      try {
+        await fs.promises.access(targetDir);
+      } catch {
+        await fs.promises.mkdir(targetDir, { recursive: true });
       }
 
-      if (fs.existsSync(targetPath)) {
+      try {
+        await fs.promises.access(targetPath);
         store.addLog("warning", `Duplicate found: ${file.name} already exists in target.`);
-        // Could handle renaming here
         return;
+      } catch {
+        // Path doesn't exist, proceed
       }
 
       await this.safeMove(file.path, targetPath);
@@ -71,17 +75,26 @@ export class Organizer {
       store.addLog("success", `Moved ${file.name} successfully.`);
     } catch (error) {
       store.addLog("error", `Failed to move ${file.name}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
   }
 
   private async safeMove(from: string, to: string) {
     try {
-      fs.renameSync(from, to);
+      await fs.promises.rename(from, to);
     } catch (error: any) {
       if (error.code === 'EXDEV') {
         // Fallback for cross-device moves
-        fs.copyFileSync(from, to);
-        fs.unlinkSync(from);
+        await fs.promises.copyFile(from, to);
+        try {
+          await fs.promises.unlink(from);
+        } catch (unlinkError) {
+          // If unlink fails, attempt to remove the copied file to stay consistent
+          try {
+            await fs.promises.unlink(to);
+          } catch {}
+          throw new Error(`Failed to remove source after cross-device copy: ${unlinkError instanceof Error ? unlinkError.message : String(unlinkError)}`);
+        }
       } else {
         throw error;
       }
@@ -98,11 +111,14 @@ export class Organizer {
     while (this.history.length > 0) {
       const op = this.history.pop()!;
       try {
-        if (fs.existsSync(op.to)) {
-          const dir = path.dirname(op.from);
-          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-          await this.safeMove(op.to, op.from);
+        await fs.promises.access(op.to);
+        const dir = path.dirname(op.from);
+        try {
+          await fs.promises.access(dir);
+        } catch {
+          await fs.promises.mkdir(dir, { recursive: true });
         }
+        await this.safeMove(op.to, op.from);
       } catch (error) {
         store.addLog("error", `Undo failed for ${op.to}: ${error instanceof Error ? error.message : String(error)}`);
       }
