@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { Voy } from "voy-search";
+import { VectorStore } from "./vectorStore";
 import path from "path";
 import fs from "fs";
 import { type AnimeFile } from "./store";
@@ -8,12 +8,12 @@ const DB_PATH = "otaku_archive.db";
 
 export class Indexer {
   private db: Database;
-  private voy: Voy;
+  private voy: VectorStore;
 
   constructor() {
     this.db = new Database(DB_PATH);
     this.initDb();
-    this.voy = new Voy();
+    this.voy = new VectorStore();
   }
 
   private initDb() {

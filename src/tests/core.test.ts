@@ -28,9 +28,9 @@ mock.module("bun:sqlite", () => {
   };
 });
 
-mock.module("voy-search", () => {
+mock.module("../lib/vectorStore", () => {
   return {
-    Voy: class Voy {
+    VectorStore: class VectorStore {
       add() {}
       search() {
         return { neighbors: [{ id: "test-id-1" }] };
