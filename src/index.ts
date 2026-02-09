@@ -86,9 +86,6 @@ renderer.on("key", (data: Buffer) => {
 
   // F5: AI Setup (Escape [ 1 5 ~ )
   if (key === "\u001b[15~") {
-    store.addLog("info", "AI SETUP: Enter your OpenRouter API key in the terminal (simulated)");
-    // In a real TUI we'd switch view to an input field
-    // For now we'll simulate it
     store.setState({ view: "ai-setup" });
   }
 

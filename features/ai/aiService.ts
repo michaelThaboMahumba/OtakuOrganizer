@@ -51,27 +51,27 @@ export class AIService {
       throw new Error("AI Service not initialized. Please run ai-setup.");
     }
 
-    // Using TanStack Query patterns for rate limiting/caching (conceptual)
-    // In a real app, we'd use queryClient.fetchQuery
+    return queryClient.fetchQuery({
+      queryKey: ["grouping", fileName],
+      queryFn: async () => {
+        const response = await this.openai!.chat.completions.create({
+          model: store.getState().config.ai.model,
+          messages: [
+            {
+              role: "system",
+              content: "You are an anime organization expert. Parse the following filename and return a JSON object with series name, season number, and episode number. Example: { \"series\": \"Naruto\", \"season\": 1, \"episode\": 5 }",
+            },
+            {
+              role: "user",
+              content: fileName,
+            },
+          ],
+          response_format: { type: "json_object" },
+        });
 
-    try {
-      const response = await this.openai.chat.completions.create({
-        model: store.getState().config.ai.model,
-        messages: [
-          {
-            role: "system",
-            content: "You are an anime organization expert. Parse the following filename and return a JSON object with series name, season number, and episode number. Example: { \"series\": \"Naruto\", \"season\": 1, \"episode\": 5 }",
-          },
-          {
-            role: "user",
-            content: fileName,
-          },
-        ],
-        response_format: { type: "json_object" },
-      });
+        const content = response.choices[0]?.message?.content;
+        if (!content) return null;
 
-      const content = response.choices[0]?.message?.content;
-      if (content) {
         const parsed = JSON.parse(content);
         if (
           typeof parsed?.series !== "string" ||
@@ -81,16 +81,14 @@ export class AIService {
           parsed.season < 0 ||
           parsed.episode < 0
         ) {
-          store.addLog("error", "AI response failed validation.");
-          return null;
+          throw new Error("AI response failed validation.");
         }
         return parsed;
       }
-    } catch (error) {
+    }).catch((error) => {
       store.addLog("error", `AI Error: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    return null;
+      return null;
+    });
   }
 
   getGuidelines() {

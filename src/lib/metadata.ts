@@ -65,13 +65,43 @@ export class MetadataParser {
   }
 
   async fetchOnlineMetadata(title: string) {
-    // Mock KO API
     store.addLog("info", `Fetching online metadata for: ${title}`);
-    await new Promise(resolve => setTimeout(resolve, 500));
 
+    try {
+      // Using Jikan API (MyAnimeList unofficial API)
+      const response = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(title)}&limit=1`);
+
+      if (response.status === 429) {
+        store.addLog("warning", "Rate limited by metadata API. Using local fallback.");
+        return this.getFallbackMetadata(title);
+      }
+
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+
+      const data: any = await response.json();
+      const anime = data.data?.[0];
+
+      if (anime) {
+        return {
+          description: anime.synopsis || `No description available for ${title}.`,
+          tags: anime.genres?.map((g: any) => g.name) || [],
+          malId: anime.mal_id,
+          rating: anime.score
+        };
+      }
+    } catch (error) {
+      store.addLog("warning", `Failed to fetch metadata for ${title}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    return this.getFallbackMetadata(title);
+  }
+
+  private getFallbackMetadata(title: string) {
     return {
-      description: `Detailed information about ${title}. This is a popular anime series.`,
-      tags: ["Action", "Adventure", "Fantasy"],
+      description: `Local metadata for ${title}. (Online enrichment unavailable)`,
+      tags: [],
     };
   }
 }

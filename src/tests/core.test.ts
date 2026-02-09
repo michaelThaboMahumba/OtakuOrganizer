@@ -39,6 +39,25 @@ mock.module("../lib/vectorStore", () => {
   };
 });
 
+mock.module("../lib/embeddings", () => {
+  return {
+    embeddingService: {
+      generate: async () => new Array(384).fill(0).map(() => Math.random()),
+      init: async () => {}
+    }
+  };
+});
+
+// Mock global fetch for Jikan API
+// @ts-ignore
+global.fetch = async () => ({
+  ok: true,
+  status: 200,
+  json: async () => ({
+    data: [{ synopsis: "Mock synopsis", genres: [{ name: "Action" }], mal_id: 123, score: 8.5 }]
+  })
+});
+
 describe("Core Logic Suite", () => {
   let MetadataParser: any;
   let Indexer: any;
@@ -89,6 +108,10 @@ describe("Core Logic Suite", () => {
       expect(res.title).toBe("Anime Movie 1280x720");
       expect(res.season).toBeUndefined();
       expect(res.episode).toBeUndefined();
+
+      const res2 = metadata.parse("Show 720x480.mkv");
+      expect(res2.season).toBeUndefined();
+      expect(res2.episode).toBeUndefined();
     });
 
     test("should correctly parse S/E with resolution tags present", () => {
@@ -113,14 +136,14 @@ describe("Core Logic Suite", () => {
       };
 
       await indexer.indexFiles([mockFile]);
-      const results = indexer.search("Naruto");
+      const results = await indexer.search("Naruto");
       expect(results.length).toBeGreaterThan(0);
       expect(results[0]?.series).toBe("Naruto");
     });
 
     test("should perform semantic search", async () => {
       // Indexer.search(..., true) uses voy
-      const results = indexer.search("Ninja anime", true);
+      const results = await indexer.search("Ninja anime", true);
       // Even if mock embeddings are simple, it should return results from the voy index
       expect(Array.isArray(results)).toBe(true);
     });
