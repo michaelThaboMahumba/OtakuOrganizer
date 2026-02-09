@@ -39,7 +39,7 @@ export class CommandHandler {
 
       // Use Semantic Search to improve metadata if AI is disabled
       if (!store.getState().config.ai.enabled && (!updatedFile.series || updatedFile.series === "Unknown")) {
-        const matches = indexer.search(updatedFile.name, true);
+        const matches = await indexer.search(updatedFile.name, true);
         if (matches.length > 0 && matches[0]!.series) {
           updatedFile.series = matches[0]!.series;
           store.addLog("info", `Semantic match for ${updatedFile.name}: ${updatedFile.series}`);
@@ -77,7 +77,7 @@ export class CommandHandler {
 
   async search(query: string) {
     store.addLog("info", `Searching for: ${query}`);
-    const results = indexer.search(query);
+    const results = await indexer.search(query);
     store.addLog("info", `Found ${results.length} matches.`);
     return results;
   }

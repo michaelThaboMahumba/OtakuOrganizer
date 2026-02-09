@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
-import { Voy } from "voy-search";
+import { VectorStore } from "./vectorStore";
+import { embeddingService } from "./embeddings";
 import path from "path";
 import fs from "fs";
 import { type AnimeFile } from "./store";
@@ -8,12 +9,12 @@ const DB_PATH = "otaku_archive.db";
 
 export class Indexer {
   private db: Database;
-  private voy: Voy;
+  private voy: VectorStore;
 
   constructor() {
     this.db = new Database(DB_PATH);
     this.initDb();
-    this.voy = new Voy();
+    this.voy = new VectorStore();
   }
 
   private initDb() {
@@ -62,31 +63,22 @@ export class Indexer {
     transaction(files);
 
     // Update Voy for semantic search
-    const resource = {
-      embeddings: files.map((f) => ({
+    const embeddings = await Promise.all(
+      files.map(async (f) => ({
         id: f.id,
         title: f.name,
         url: f.path,
-        // Simulate embeddings (Voy expects 768 or 1536 depending on model, we'll use a simple approach)
-        embeddings: this.generateMockEmbedding(f.name + " " + (f.series || "")),
-      })),
-    };
-    this.voy.add(resource);
+        embeddings: await embeddingService.generate(f.name + " " + (f.series || "")),
+      }))
+    );
+
+    this.voy.add({ embeddings });
   }
 
-  private generateMockEmbedding(text: string): number[] {
-    // Deterministic mock embeddings for simulation
-    const arr = new Array(768).fill(0);
-    for (let i = 0; i < text.length; i++) {
-      arr[i % 768] += text.charCodeAt(i) / 255;
-    }
-    return arr;
-  }
-
-  search(query: string, semantic: boolean = false): AnimeFile[] {
+  async search(query: string, semantic: boolean = false): Promise<AnimeFile[]> {
     if (semantic) {
-      const queryEmbedding = new Float32Array(this.generateMockEmbedding(query));
-      const results = this.voy.search(queryEmbedding, 10);
+      const queryEmbedding = await embeddingService.generate(query);
+      const results = this.voy.search(new Float32Array(queryEmbedding), 10);
       const ids = results.neighbors.map((n) => n.id);
       if (ids.length === 0) return [];
 
