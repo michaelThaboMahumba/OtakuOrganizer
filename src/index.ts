@@ -12,24 +12,36 @@ const renderer = await createCliRenderer({ exitOnCtrlC: true });
 setGlobalRenderer(renderer);
 
 let currentRoot: Renderable | null = null;
-let lastView: string | null = null;
+let lastUiSnapshot: string | null = null;
 
+/**
+ * Update the CLI UI by mounting a new layout when relevant UI state changes, otherwise request a re-render.
+ *
+ * Reads the current application state, builds a snapshot containing `view`, `filesCount`, `logsCount`, `progress`, `pulse`, `aiEnabled`, and `theme`, and compares it to the last rendered snapshot. If the snapshot differs, unmounts the previous root (if any), instantiates and mounts a new Layout root, and updates the stored snapshot; if the snapshot is identical, requests a renderer re-render without replacing the root.
+ */
 function render() {
   const state = store.getState();
 
-  // Only full re-render if the view changes
-  if (state.view !== lastView) {
+  // Create a snapshot of UI-relevant state
+  const currentSnapshot = JSON.stringify({
+    view: state.view,
+    filesCount: state.files.length,
+    logsCount: state.logs.length,
+    progress: state.progress,
+    pulse: state.pulse,
+    aiEnabled: state.config.ai.enabled,
+    theme: state.config.theme,
+  });
+
+  if (currentSnapshot !== lastUiSnapshot) {
     if (currentRoot) {
       renderer.root.remove(currentRoot.id);
     }
     const layoutVNode = Layout();
     currentRoot = instantiate(renderer, layoutVNode);
     renderer.root.add(currentRoot);
-    lastView = state.view;
+    lastUiSnapshot = currentSnapshot;
   } else {
-    // For property updates, OpenTUI components usually need manual updates
-    // In a production-grade app, we'd have a diffing engine.
-    // Here we'll do a partial refresh if needed or just request a render.
     renderer.requestRender();
   }
 }
@@ -44,20 +56,8 @@ render();
 
 store.addLog("success", "Otaku Organizer initialized.");
 
-// Typing effect for the welcome message
+// Welcome message
 const welcomeMsg = "Welcome back, Commander. Ready to organize?";
-let currentPos = 0;
-const interval = setInterval(() => {
-  if (currentPos >= welcomeMsg.length) {
-    clearInterval(interval);
-    return;
-  }
-  const partial = welcomeMsg.slice(0, currentPos + 1);
-  // We can't easily "update" a log entry once added without an ID,
-  // so we'll just add it once it's done or add it and update the state.
-  currentPos++;
-}, 50);
-
 store.addLog("info", welcomeMsg);
 
 // Keyboard Handlers
@@ -99,7 +99,9 @@ renderer.on("key", (data: Buffer) => {
 
   // F10: Undo (Escape [ 2 1 ~ )
   if (key === "\u001b[21~") {
-    commandHandler.undo();
+    commandHandler.undo().catch((error) => {
+      store.addLog("error", `Undo error: ${error.message}`);
+    });
   }
 
   // Ctrl+L: Toggle Theme

@@ -15,6 +15,13 @@ const LOGO = [
   "╚██████╔╝   ██║   ██║  ██║██║  ██╗╚██████╔╝",
 ];
 
+/**
+ * Builds the application's top-level UI container (header, main content, and footer) using the current application state.
+ *
+ * The header renders the ASCII logo and title; the main content is chosen from onboarding, summary, AI setup, or the default two-pane file view depending on `state.view`; the footer shows file count, mode indication, and key hints. Visuals such as colors and background are derived from the current state (theme, AI enabled, pulse).
+ *
+ * @returns A top-level `Box` element containing the assembled layout components configured from the current application state.
+ */
 export function Layout() {
   const state = store.getState();
 
@@ -52,8 +59,11 @@ export function Layout() {
       border: ["top"],
     },
     Text({ content: `Files: ${state.files.length}`, fg: "#BB86FC" }),
-    Text({ content: `AI: ${state.config.ai.enabled ? "ENABLED" : "DISABLED"}`, attributes: state.config.ai.enabled ? TextAttributes.NONE : TextAttributes.DIM }),
-    Text({ content: "F1: Scan | F2: Group | F3: Sync | F4: AI | F10: Undo", attributes: TextAttributes.DIM })
+    Text({
+      content: `Mode: ${state.config.ai.enabled ? "AI-POWERED" : "SEMANTIC-ONLY"}`,
+      fg: state.config.ai.enabled ? "#03DAC6" : "#FFB74D",
+    }),
+    Text({ content: "F1: Scan | F2: Group | F3: Sync | F4: AI | F5: Setup | F10: Undo", attributes: TextAttributes.DIM })
   );
 
   const MainContent = state.view === "onboarding"
